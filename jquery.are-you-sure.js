@@ -150,23 +150,25 @@
       initForm($(this));
     }
 
-    if (!settings.silent && !window.aysUnloadSet) {
-      window.aysUnloadSet = true;
-      $(window).bind('beforeunload', function() {
-        $dirtyForms = $("form").filter('.' + settings.dirtyClass);
-        if ($dirtyForms.length == 0) {
+    var beforeunload = function() {
+      $dirtyForms = $("form").filter('.' + settings.dirtyClass);
+      if ($dirtyForms.length == 0) {
+        return;
+      }
+      // Prevent multiple prompts - seen on Chrome and IE
+      if (navigator.userAgent.toLowerCase().match(/msie|chrome/)) {
+        if (window.aysHasPrompted) {
           return;
         }
-        // Prevent multiple prompts - seen on Chrome and IE
-        if (navigator.userAgent.toLowerCase().match(/msie|chrome/)) {
-          if (window.aysHasPrompted) {
-            return;
-          }
-          window.aysHasPrompted = true;
-          window.setTimeout(function() {window.aysHasPrompted = false;}, 900);
-        }
-        return settings.message;
-      });
+        window.aysHasPrompted = true;
+        window.setTimeout(function() {window.aysHasPrompted = false;}, 900);
+      }
+      return settings.message;
+    }
+
+    if (!settings.silent && !window.aysUnloadSet) {
+      window.aysUnloadSet = true;
+      $(window).bind('beforeunload', beforeunload);
     }
 
     return this.each(function(elem) {
@@ -183,6 +185,7 @@
       $form.bind('rescan.areYouSure', rescan);
       $form.bind('reinitialize.areYouSure', reinitialize);
       $form.bind('checkform.areYouSure', checkForm);
+      $form.bind('beforeunload.areYouSure', beforeunload);
       initForm($form);
     });
   };
